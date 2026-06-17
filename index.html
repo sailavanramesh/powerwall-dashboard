@@ -201,7 +201,7 @@ body{padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 24px)
 
 <div class="wrap">
 
-  <div class="banner hidden" id="night-note" style="border-style:solid;display:flex;align-items:center;gap:10px"><svg style="width:15px;height:15px;flex-shrink:0;color:var(--txt-3)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>Data paused overnight — Powerwall monitoring resumes at sunrise.</div>
+  <div class="banner hidden" id="night-note" style="border-style:solid;display:flex;align-items:center;gap:10px"><svg style="width:15px;height:15px;flex-shrink:0;color:var(--txt-3)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg><span id="night-note-text">Data paused overnight — Powerwall monitoring resumes at sunrise.</span></div>
 
   <div class="banner hidden" id="setup-banner">
     <b>Connect live battery data.</b> Paste your Apps Script Web App URL to show real SoC, solar and grid power. Without it, the app shows Amber prices only.
@@ -359,7 +359,11 @@ function pad(n){return String(n).padStart(2,'0')}
 function fmt(d){return pad(d.getHours())+':'+pad(d.getMinutes())}
 function $(id){return document.getElementById(id)}
 
-function toggleSetup(){$('setup-banner').classList.toggle('hidden')}
+function toggleSetup(){
+  var b=$('setup-banner');
+  b.classList.toggle('hidden');
+  if(!b.classList.contains('hidden'))b.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
 function saveEndpoint(){
   var v=$('endpoint-input').value.trim();
   if(v){endpoint=v;localStorage.setItem(EP_KEY,v);}
@@ -580,10 +584,19 @@ async function refresh(manual){
     $('price-desc').textContent='price unavailable';
   }
 
-  // Overnight stale-data notice (cache >10 min means monitor is sleeping)
+  // Overnight / monitor-offline notice
   var nightNote=$('night-note');
   if(liveData&&liveData.cacheAgeSec!=null){
-    nightNote.classList.toggle('hidden',liveData.cacheAgeSec<=600);
+    var age=liveData.cacheAgeSec;
+    if(age===-1){
+      $('night-note-text').textContent='Powerwall monitor not running — run logPowerwall() once in Apps Script to start it.';
+      nightNote.classList.remove('hidden');
+    }else if(age>600){
+      $('night-note-text').textContent='Data paused overnight — Powerwall monitoring resumes at sunrise.';
+      nightNote.classList.remove('hidden');
+    }else{
+      nightNote.classList.add('hidden');
+    }
   }else{
     nightNote.classList.add('hidden');
   }
@@ -673,7 +686,16 @@ function execSheet(){
     var sep=endpoint.indexOf('?')>=0?'&':'?';
     fetch(endpoint+sep+'action='+a.gasKey)
       .then(function(r){return r.json();})
-      .then(function(d){showToast(d.ok?'✓ '+d.result:'Error: '+(d.error||'unknown'));})
+      .then(function(d){
+        if(!d.ok){showToast('Error: '+(d.error||'unknown'));return;}
+        if(a.gasKey==='replan'&&d.windows&&d.windows.length){
+          buildTimeline(d.windows);
+          $('plan-note').textContent='just updated';
+          showToast('✓ Replanned — '+d.windows.length+' window'+(d.windows.length!==1?'s':'')+' scheduled');
+        }else{
+          showToast('✓ '+d.result);
+        }
+      })
       .catch(function(){showToast('Could not reach endpoint — check Settings');});
   }else{
     copyPrompt(a.prompt);
