@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0c0c0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Powerwall">
+<link rel="manifest" href="manifest.json">
+<title>Powerwall · Amber</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c0c0f;
+  --surface:#16161b;
+  --surface-2:#1f1f26;
+  --surface-3:#282830;
+  --line:rgba(255,255,255,.07);
+  --line-2:rgba(255,255,255,.12);
+  --txt:#f4f4f1;
+  --txt-2:#a0a0aa;
+  --txt-3:#6c6c76;
+  --amber:#ffb020;
+  --amber-dim:rgba(255,176,32,.14);
+  --teal:#2dd4a4;
+  --teal-dim:rgba(45,212,164,.14);
+  --blue:#5aa2ff;
+  --blue-dim:rgba(90,162,255,.14);
+  --violet:#a78bfa;
+  --violet-dim:rgba(167,139,250,.14);
+  --red:#ff6b6b;
+  --red-dim:rgba(255,107,107,.14);
+  --radius:18px;
+  --radius-sm:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--txt);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+body{padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 24px);max-width:480px;margin:0 auto;min-height:100vh}
+.wrap{padding:0 16px}
+
+/* ===== Header ===== */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 16px 14px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#ffb020,#ff7a1a);display:flex;align-items:center;justify-content:center}
+.brand-logo svg{width:20px;height:20px}
+.brand h1{font-size:16px;font-weight:600;letter-spacing:-.01em}
+.brand p{font-size:11px;color:var(--txt-3);font-weight:500}
+.live-pill{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--txt-2);background:var(--surface);border:1px solid var(--line);padding:6px 11px;border-radius:20px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 0 rgba(45,212,164,.5);animation:pulse 2s infinite}
+.live-dot.stale{background:var(--txt-3);animation:none;box-shadow:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(45,212,164,.5)}70%{box-shadow:0 0 0 6px rgba(45,212,164,0)}100%{box-shadow:0 0 0 0 rgba(45,212,164,0)}}
+
+/* ===== Hero ===== */
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px 20px 18px;margin-bottom:12px;position:relative;overflow:hidden}
+.hero-grid{display:flex;align-items:center;gap:22px}
+.ring-wrap{position:relative;width:124px;height:124px;flex-shrink:0}
+.ring-wrap svg{transform:rotate(-90deg)}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.ring-val{font-size:30px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1}
+.ring-lbl{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--txt-3)}
+.hero-right{flex:1;min-width:0}
+.price-display{display:flex;align-items:baseline;gap:6px;margin-bottom:3px}
+.price-val{font-size:34px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1}
+.price-unit{font-size:13px;color:var(--txt-3);font-weight:500}
+.price-desc{font-size:12px;color:var(--txt-2);font-weight:500;text-transform:capitalize;margin-bottom:12px}
+.status-tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:6px 11px;border-radius:10px}
+.status-tag svg{width:14px;height:14px}
+.tag-charge{background:var(--teal-dim);color:var(--teal)}
+.tag-self{background:var(--surface-2);color:var(--txt-2)}
+.tag-peak{background:var(--red-dim);color:var(--red)}
+.tag-export{background:var(--amber-dim);color:var(--amber)}
+
+/* ===== Flow strip ===== */
+.flows{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.flow{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:13px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.flow-ic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.flow-ic svg{width:19px;height:19px}
+.ic-solar{background:var(--teal-dim);color:var(--teal)}
+.ic-grid{background:var(--blue-dim);color:var(--blue)}
+.ic-home{background:var(--amber-dim);color:var(--amber)}
+.ic-batt{background:var(--violet-dim);color:var(--violet)}
+.flow-val{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1}
+.flow-val small{font-size:9px;color:var(--txt-3);font-weight:500}
+.flow-name{font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--txt-3)}
+.flow-dir{font-size:9px;font-weight:600;margin-top:-3px}
+
+/* ===== Card ===== */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;margin-bottom:12px}
+.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.card-title{font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--txt-2);display:flex;align-items:center;gap:7px}
+.card-title svg{width:15px;height:15px;color:var(--txt-3)}
+.card-note{font-size:11px;color:var(--txt-3);font-weight:500}
+
+/* ===== Forecast chart ===== */
+.fc{display:flex;align-items:flex-end;gap:2px;height:96px;position:relative;padding-bottom:18px}
+.fc-bar{flex:1;border-radius:3px 3px 0 0;min-height:3px;position:relative;transition:opacity .15s}
+.fc-bar.cheap{background:var(--teal)}
+.fc-bar.mid{background:var(--amber)}
+.fc-bar.peak{background:var(--red);opacity:.85}
+.fc-now-line{position:absolute;top:0;bottom:18px;width:1.5px;background:var(--txt);opacity:.75;z-index:2}
+.fc-axis{position:relative;height:16px;font-size:10px;color:var(--txt-3);font-weight:500;margin-top:2px;font-variant-numeric:tabular-nums}
+.fc-axis span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.legend{display:flex;gap:14px;margin-top:12px;font-size:11px;color:var(--txt-3);font-weight:500;align-items:center}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+
+/* ===== Timeline ===== */
+.tl{position:relative;height:30px;background:var(--surface-2);border-radius:8px;overflow:hidden;margin-bottom:8px}
+.tl-peak{position:absolute;top:0;bottom:0;background:var(--red-dim)}
+.tl-now{position:absolute;top:0;bottom:0;width:1.5px;background:var(--txt);z-index:5}
+.tl-win{position:absolute;top:4px;bottom:4px;border-radius:4px}
+.tl-win.done{background:var(--surface-3)}
+.tl-win.active{background:var(--teal)}
+.tl-win.future{background:var(--amber);opacity:.85}
+.tl-axis{display:flex;justify-content:space-between;font-size:10px;color:var(--txt-3);font-weight:500;margin-bottom:14px}
+.wins{display:flex;flex-direction:column;gap:0}
+.win{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.win:last-child{border-bottom:none;padding-bottom:0}
+.win:first-child{padding-top:0}
+.win-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.win-info{flex:1;min-width:0}
+.win-name{font-size:14px;font-weight:600;margin-bottom:2px}
+.win-meta{font-size:11px;color:var(--txt-3);font-weight:500;font-variant-numeric:tabular-nums}
+.win-badge{font-size:10px;font-weight:600;padding:4px 9px;border-radius:8px;white-space:nowrap;letter-spacing:.02em}
+.b-done{background:var(--surface-2);color:var(--txt-3)}
+.b-active{background:var(--teal-dim);color:var(--teal)}
+.b-up{background:var(--amber-dim);color:var(--amber)}
+
+/* ===== Controls ===== */
+.ctrls{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.ctrl{display:flex;align-items:center;gap:10px;padding:14px 13px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--surface-2);cursor:pointer;font-size:13px;font-weight:600;color:var(--txt);text-align:left;font-family:inherit;transition:transform .1s,background .15s}
+.ctrl:active{transform:scale(.97);background:var(--surface-3)}
+.ctrl svg{width:18px;height:18px;flex-shrink:0;color:var(--txt-2)}
+.ctrl.go{border-color:rgba(45,212,164,.3)}
+.ctrl.go svg{color:var(--teal)}
+.ctrl.stop{border-color:rgba(255,107,107,.3)}
+.ctrl.stop svg{color:var(--red)}
+.ctrl.stop{color:var(--red)}
+
+/* ===== Intervals ===== */
+.iv{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+.iv:last-child{border-bottom:none}
+.iv-left{display:flex;align-items:center;gap:8px}
+.iv-time{font-size:13px;font-weight:500;font-variant-numeric:tabular-nums}
+.iv-tag{font-size:9px;font-weight:600;padding:2px 7px;border-radius:8px;text-transform:uppercase;letter-spacing:.04em}
+.t-now{background:var(--blue-dim);color:var(--blue)}
+.t-peak{background:var(--red-dim);color:var(--red)}
+.iv-price{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+
+/* ===== Refresh / footer ===== */
+.refresh{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;margin-top:4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);color:var(--txt-2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.refresh:active{background:var(--surface-2)}
+.refresh svg{width:16px;height:16px}
+.refresh.spinning svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.foot{text-align:center;font-size:11px;color:var(--txt-3);padding:16px 0 0;font-weight:500}
+.foot a{color:var(--txt-2);text-decoration:none}
+
+/* ===== Setup banner ===== */
+.banner{background:var(--surface-2);border:1px dashed var(--line-2);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:12px;font-size:12px;color:var(--txt-2);line-height:1.5}
+.banner b{color:var(--txt);font-weight:600}
+.banner button{margin-top:10px;background:var(--surface-3);border:1px solid var(--line-2);color:var(--txt);font-size:12px;font-weight:600;padding:8px 14px;border-radius:9px;cursor:pointer;font-family:inherit}
+.banner input{width:100%;margin-top:10px;background:var(--bg);border:1px solid var(--line-2);color:var(--txt);font-size:12px;padding:10px 12px;border-radius:9px;font-family:inherit}
+.hidden{display:none!important}
+.skel{color:var(--txt-3)}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(10px);background:rgba(255,255,255,.13);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);color:var(--txt);font-size:13px;font-weight:500;padding:10px 18px;border-radius:20px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;white-space:nowrap;z-index:999;border:1px solid var(--line-2)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#0c0c0f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+    </div>
+    <div>
+      <h1>Powerwall</h1>
+      <p>Amber wholesale · Hampton Park</p>
+    </div>
+  </div>
+  <div class="live-pill"><span class="live-dot stale" id="live-dot"></span><span id="live-txt">Loading</span></div>
+</div>
+
+<div class="wrap">
+
+  <div class="banner hidden" id="night-note" style="border-style:solid;display:flex;align-items:center;gap:10px"><svg style="width:15px;height:15px;flex-shrink:0;color:var(--txt-3)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>Data paused overnight — Powerwall monitoring resumes at sunrise.</div>
+
+  <div class="banner hidden" id="setup-banner">
+    <b>Connect live battery data.</b> Paste your Apps Script Web App URL to show real SoC, solar and grid power. Without it, the app shows Amber prices only.
+    <input type="text" id="endpoint-input" placeholder="https://script.google.com/macros/s/.../exec" inputmode="url">
+    <button onclick="saveEndpoint()">Save &amp; connect</button>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-grid">
+      <div class="ring-wrap">
+        <svg width="124" height="124" viewBox="0 0 124 124">
+          <circle cx="62" cy="62" r="54" fill="none" stroke="var(--surface-3)" stroke-width="9"/>
+          <circle id="ring-fill" cx="62" cy="62" r="54" fill="none" stroke="var(--teal)" stroke-width="9" stroke-linecap="round" stroke-dasharray="339.3" stroke-dashoffset="339.3" style="transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1),stroke .4s"/>
+        </svg>
+        <div class="ring-center">
+          <div class="ring-val skel" id="soc-val">--</div>
+          <div class="ring-lbl">Battery</div>
+        </div>
+      </div>
+      <div class="hero-right">
+        <div class="price-display">
+          <span class="price-val skel" id="price-val">--</span>
+          <span class="price-unit">c/kWh</span>
+        </div>
+        <div class="price-desc" id="price-desc">fetching price</div>
+        <div class="status-tag tag-self" id="status-tag">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/></svg>
+          <span>Loading</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Power flows -->
+  <div class="flows">
+    <div class="flow">
+      <div class="flow-ic ic-solar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg></div>
+      <div><div class="flow-val skel" id="f-solar">--<small> kW</small></div></div>
+      <div class="flow-name">Solar</div>
+    </div>
+    <div class="flow">
+      <div class="flow-ic ic-grid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6M15 2v6M5 8h14l-1 6a3 3 0 01-3 2.5H9A3 3 0 016 14L5 8zM12 16.5V22"/></svg></div>
+      <div><div class="flow-val skel" id="f-grid">--<small> kW</small></div><div class="flow-dir" id="d-grid"></div></div>
+      <div class="flow-name">Grid</div>
+    </div>
+    <div class="flow">
+      <div class="flow-ic ic-home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 9.5V21h14V9.5"/></svg></div>
+      <div><div class="flow-val skel" id="f-home">--<small> kW</small></div></div>
+      <div class="flow-name">Home</div>
+    </div>
+    <div class="flow">
+      <div class="flow-ic ic-batt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="7" width="14" height="10" rx="2"/><path d="M18 10h2v4h-2M11 9l-2 4h3l-2 4" stroke-width="1.6"/></svg></div>
+      <div><div class="flow-val skel" id="f-batt">--<small> kW</small></div><div class="flow-dir" id="d-batt"></div></div>
+      <div class="flow-name">Battery</div>
+    </div>
+  </div>
+
+  <!-- Forecast -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M7 14l4-5 3 3 5-7"/></svg>Price forecast</span>
+      <span class="card-note" id="fc-range">today</span>
+    </div>
+    <div style="display:flex;gap:0">
+      <div id="fc-yaxis" style="width:26px;height:96px;position:relative;padding-bottom:18px;flex-shrink:0"></div>
+      <div style="flex:1;min-width:0">
+        <div class="fc" id="fc"><div class="skel" style="font-size:12px;align-self:center;margin:auto">Loading forecast…</div></div>
+        <div class="fc-axis" id="fc-axis"></div>
+      </div>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--teal)"></i>Cheap</span>
+      <span><i style="background:var(--amber)"></i>Mid</span>
+      <span><i style="background:var(--red)"></i>Peak</span>
+      <span style="margin-left:auto"><i style="width:1.5px;height:11px;background:var(--txt)"></i>Now</span>
+    </div>
+  </div>
+
+  <!-- Charge plan -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Charge plan</span>
+      <span class="card-note" id="plan-note">illustrative</span>
+    </div>
+    <div class="tl" id="tl"><div class="tl-peak" id="tl-peak"></div><div class="tl-now" id="tl-now"></div></div>
+    <div class="tl-axis"><span>12a</span><span>6a</span><span>12p</span><span>6p</span><span>12a</span></div>
+    <div class="wins" id="wins"></div>
+  </div>
+
+  <!-- Controls -->
+  <div class="card">
+    <div class="card-head"><span class="card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1.1l2-1.6-2-3.4-2.4 1a7 7 0 00-1.9-1.1l-.3-2.6h-4l-.3 2.6a7 7 0 00-1.9 1.1l-2.4-1-2 3.4 2 1.6A7 7 0 005 12a7 7 0 00.1 1.1l-2 1.6 2 3.4 2.4-1a7 7 0 001.9 1.1l.3 2.6h4l.3-2.6a7 7 0 001.9-1.1l2.4 1 2-3.4-2-1.6c.1-.4.1-.7.1-1.1z"/></svg>Controls</span></div>
+    <div class="ctrls">
+      <button class="ctrl go" onclick="cmd('Run csReplanNow() to re-fetch the Amber forecast and reschedule today\'s charge windows, then show me the updated plan')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-3-6.7L21 8M21 3v5h-5"/></svg>Replan now</button>
+      <button class="ctrl" onclick="cmd('Run csStatusCheck() and tell me the current Powerwall SoC, backup_reserve percentage, and whether charging is active')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>Status check</button>
+      <button class="ctrl go" onclick="cmd('I want to start charging now. Confirm it is outside peak hours first, then run csForceChargeNow()')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>Force charge</button>
+      <button class="ctrl stop" onclick="cmd('Stop charging immediately. Run csForceStopCharge() to restore backup_reserve to 10% and clear all charge triggers')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>Stop charge</button>
+      <button class="ctrl" onclick="cmd('Run csListTriggers() and show me every current Apps Script trigger function with its schedule')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>List triggers</button>
+      <button class="ctrl" onclick="cmd('Run csSendDailySavingsSummary() and show me today\'s energy savings versus the peak rate')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Savings</button>
+    </div>
+  </div>
+
+  <!-- Intervals -->
+  <div class="card">
+    <div class="card-head"><span class="card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Upcoming intervals</span></div>
+    <div id="ivlist"><div class="skel" style="font-size:12px">Loading…</div></div>
+  </div>
+
+  <button class="refresh" id="refresh-btn" onclick="refresh(true)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-3-6.7L21 8M21 3v5h-5"/></svg>
+    Refresh
+  </button>
+
+  <div class="foot">
+    <span id="updated">Not yet refreshed</span> · <a href="#" onclick="toggleSetup();return false">Settings</a>
+  </div>
+
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+var TOKEN='psk_7b29d1584288cdd6305fe4a26f0d0ae5';
+var SITE_KEY='amb_site';
+var EP_KEY='gas_endpoint';
+var PEAK_S=15,PEAK_E=21;
+var CIRC=2*Math.PI*54;
+var siteId=localStorage.getItem(SITE_KEY)||null;
+var endpoint=localStorage.getItem(EP_KEY)||null;
+
+function pad(n){return String(n).padStart(2,'0')}
+function fmt(d){return pad(d.getHours())+':'+pad(d.getMinutes())}
+function $(id){return document.getElementById(id)}
+
+function toggleSetup(){$('setup-banner').classList.toggle('hidden')}
+function saveEndpoint(){
+  var v=$('endpoint-input').value.trim();
+  if(v){endpoint=v;localStorage.setItem(EP_KEY,v);}
+  $('setup-banner').classList.add('hidden');
+  refresh(true);
+}
+
+/* ===== SoC ring ===== */
+function setSoc(pct){
+  if(pct==null){
+    $('soc-val').textContent='--';
+    $('soc-val').classList.add('skel');
+    $('ring-fill').style.strokeDashoffset=CIRC;
+    return;
+  }
+  $('soc-val').classList.remove('skel');
+  $('soc-val').textContent=Math.round(pct)+'%';
+  var off=CIRC*(1-Math.min(100,Math.max(0,pct))/100);
+  var fill=$('ring-fill');
+  fill.style.strokeDashoffset=off;
+  fill.setAttribute('stroke',pct>=75?'var(--teal)':pct>=40?'var(--amber)':'var(--red)');
+}
+
+/* ===== Price + status ===== */
+function setPrice(p,desc,reserve,soc){
+  $('price-val').classList.remove('skel');
+  $('price-val').textContent=p.toFixed(1);
+  $('price-desc').textContent=(desc||'').replace(/([A-Z])/g,' $1').trim().toLowerCase()||'current price';
+
+  var h=new Date().getHours();
+  var inPeak=h>=PEAK_S&&h<PEAK_E;
+  var charging=reserve!=null&&reserve>=90;
+  var tag=$('status-tag');
+  var icon,cls,label;
+  if(charging){cls='tag-charge';label='Charging from grid';icon='<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>';}
+  else if(inPeak){cls='tag-peak';label='Peak — no charging';icon='<path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.4 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/>';}
+  else if(p<=15){cls='tag-charge';label='Good to charge';icon='<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>';}
+  else{cls='tag-self';label='Self-consuming';icon='<path d="M3 11l9-8 9 8M5 9.5V21h14V9.5"/>';}
+  tag.className='status-tag '+cls;
+  tag.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+icon+'</svg><span>'+label+'</span>';
+}
+
+/* ===== Flows ===== */
+function setFlow(id,val,dirId,posLabel,negLabel){
+  var el=$(id);
+  if(val==null){el.innerHTML='--<small> kW</small>';el.classList.add('skel');return;}
+  el.classList.remove('skel');
+  el.innerHTML=Math.abs(val).toFixed(2)+'<small> kW</small>';
+  if(dirId){
+    var d=$(dirId);
+    if(Math.abs(val)<0.05){d.textContent='';}
+    else if(val>0){d.textContent=posLabel;d.style.color=id==='f-grid'?'var(--blue)':'var(--violet)';}
+    else{d.textContent=negLabel;d.style.color='var(--teal)';}
+  }
+}
+
+/* ===== Forecast bars ===== */
+function buildForecast(slots){
+  var now=new Date();
+  var nowMin=now.getHours()*60+now.getMinutes();
+  var max=Math.max.apply(null,slots.map(function(s){return Math.max(0,s.perKwh)})); if(max<1)max=1;
+  // Round up to a clean scale max so bars have headroom and y-axis ticks are whole numbers
+  var niceMax=Math.max(20,Math.ceil(max/10)*10);
+  var BAR_H=78; // px — bar area height (fc height 96 - padding-bottom 18)
+
+  var html='';var nowPos=null;
+  slots.forEach(function(s,i){
+    var d=new Date(s.startTime),h=d.getHours();
+    var inPk=h>=PEAK_S&&h<PEAK_E;
+    var cls=inPk?'peak':s.perKwh<=15?'cheap':s.perKwh<=30?'mid':'peak';
+    var hpc=Math.max(2,(Math.max(0,s.perKwh)/niceMax)*BAR_H);
+    var isNow=s.type==='CurrentInterval'||(new Date(s.startTime)<=now&&new Date(s.endTime)>now);
+    if(isNow){
+      // precise position: fraction through this 30-min slot
+      var slotMin=d.getHours()*60+d.getMinutes();
+      var frac=Math.min(1,Math.max(0,(nowMin-slotMin)/30));
+      nowPos=((i+frac)/slots.length)*100;
+    }
+    html+='<div class="fc-bar '+cls+'" style="height:'+hpc+'px" title="'+fmt(d)+' · '+s.perKwh.toFixed(1)+'c"></div>';
+  });
+  $('fc').innerHTML=html;
+  // now-line: vertical line at precise current time
+  if(nowPos!=null){
+    var ln=document.createElement('div');ln.className='fc-now-line';ln.style.left=nowPos+'%';
+    $('fc').appendChild(ln);
+  }
+  // x-axis: label at every 3-hour boundary, absolutely positioned
+  var ax='';
+  slots.forEach(function(s,i){
+    var d=new Date(s.startTime);
+    if(d.getMinutes()===0&&d.getHours()%3===0){
+      var lp=((i+0.5)/slots.length*100).toFixed(1);
+      ax+='<span style="left:'+lp+'%">'+pad(d.getHours())+':00</span>';
+    }
+  });
+  $('fc-axis').innerHTML=ax;
+  // y-axis: 3 price labels (0c, mid, top) aligned to bar heights
+  var yEl=$('fc-yaxis');
+  if(yEl){
+    var mid=Math.round(niceMax/2);
+    var ticks=[niceMax,mid,0];
+    var yHtml='';
+    ticks.forEach(function(p){
+      var topPx=((1-p/niceMax)*BAR_H).toFixed(0);
+      yHtml+='<div style="position:absolute;right:4px;top:'+topPx+'px;font-size:9px;color:var(--txt-3);font-weight:500;line-height:1;transform:translateY(-50%)">'+p+'c</div>';
+    });
+    yEl.innerHTML=yHtml;
+  }
+}
+
+/* ===== Intervals ===== */
+function buildIntervals(all){
+  var now=new Date();
+  var gen=all.filter(function(i){return(i.channelType||i.channel)==='general'});
+  var up=gen.filter(function(i){return new Date(i.endTime)>now}).slice(0,8);
+  var html='';
+  up.forEach(function(iv){
+    var s=new Date(iv.startTime),e=new Date(iv.endTime),h=s.getHours();
+    var inPk=h>=PEAK_S&&h<PEAK_E,isCur=s<=now&&e>now,p=iv.perKwh;
+    var pc=inPk?'var(--red)':p<=15?'var(--teal)':p<=30?'var(--amber)':'var(--red)';
+    var tags='';
+    if(isCur)tags+='<span class="iv-tag t-now">now</span>';
+    if(inPk)tags+='<span class="iv-tag t-peak">peak</span>';
+    html+='<div class="iv"><div class="iv-left"><span class="iv-time">'+fmt(s)+'–'+fmt(e)+'</span>'+tags+'</div><span class="iv-price" style="color:'+pc+'">'+p.toFixed(1)+'c</span></div>';
+  });
+  $('ivlist').innerHTML=html||'<div class="skel" style="font-size:12px">No upcoming intervals</div>';
+}
+
+/* ===== Timeline + plan ===== */
+function buildTimeline(windows){
+  var total=1440,now=new Date(),nm=now.getHours()*60+now.getMinutes();
+  $('tl-now').style.left=(nm/total*100).toFixed(1)+'%';
+  $('tl-peak').style.left=(PEAK_S*60/total*100).toFixed(1)+'%';
+  $('tl-peak').style.width=((PEAK_E-PEAK_S)*60/total*100).toFixed(1)+'%';
+
+  var tl=$('tl');
+  tl.querySelectorAll('.tl-win').forEach(function(e){e.remove()});
+  var html='';
+  windows.forEach(function(w){
+    var sp=w.s.split(':'),ep=w.e.split(':');
+    var sm=+sp[0]*60+(+sp[1]),em=+ep[0]*60+(+ep[1]);
+    if(em<sm)em+=total;
+    var l=(sm/total*100).toFixed(1),wd=((em-sm)/total*100).toFixed(1);
+    var isPast=em<nm&&sm>60,isAct=sm<=nm&&em>nm;
+    var cls=isPast?'done':isAct?'active':'future';
+    var bar=document.createElement('div');bar.className='tl-win '+cls;
+    bar.style.left=l+'%';bar.style.width=Math.max(parseFloat(wd),1.5)+'%';tl.appendChild(bar);
+    var dot=isPast?'var(--surface-3)':isAct?'var(--teal)':'var(--amber)';
+    var bcls=isPast?'b-done':isAct?'b-active':'b-up';
+    var btxt=isPast?'Done':isAct?'Active':'Upcoming';
+    html+='<div class="win"><div class="win-dot" style="background:'+dot+'"></div><div class="win-info"><div class="win-name">'+w.name+'</div><div class="win-meta">'+w.s+'–'+w.e+' · avg '+w.p.toFixed(1)+' c/kWh</div></div><div class="win-badge '+bcls+'">'+btxt+'</div></div>';
+  });
+  $('wins').innerHTML=html;
+}
+
+/* ===== Live data via Apps Script ===== */
+async function fetchLive(){
+  if(!endpoint)return null;
+  try{
+    var r=await fetch(endpoint,{method:'GET'});
+    if(!r.ok)return null;
+    return await r.json();
+  }catch(e){return null}
+}
+
+/* ===== Amber ===== */
+async function getSite(){
+  if(siteId)return siteId;
+  var r=await fetch('https://api.amber.com.au/v1/sites',{headers:{Authorization:'Bearer '+TOKEN}});
+  if(!r.ok)throw new Error('sites '+r.status);
+  var s=await r.json();if(!s.length)throw new Error('no sites');
+  siteId=s[0].id;localStorage.setItem(SITE_KEY,siteId);return siteId;
+}
+
+function setLive(state){
+  var dot=$('live-dot'),txt=$('live-txt');
+  if(state==='live'){dot.className='live-dot';txt.textContent='Live';}
+  else if(state==='amber'){dot.className='live-dot';txt.textContent='Prices live';}
+  else{dot.className='live-dot stale';txt.textContent='Offline';}
+}
+
+async function refresh(manual){
+  if(manual)$('refresh-btn').classList.add('spinning');
+  // Show setup banner if no endpoint configured
+  if(!endpoint && $('setup-banner').classList.contains('hidden')){
+    // only auto-show once
+    if(!localStorage.getItem('setup_dismissed')){$('setup-banner').classList.remove('hidden');localStorage.setItem('setup_dismissed','1');}
+  }
+
+  var liveData=null;
+  try{liveData=await fetchLive();}catch(e){}
+
+  // Amber prices
+  try{
+    var sid=await getSite();
+    var r=await fetch('https://api.amber.com.au/v1/sites/'+encodeURIComponent(sid)+'/prices/current?next=48&previous=1',{headers:{Authorization:'Bearer '+TOKEN}});
+    if(!r.ok)throw new Error('prices '+r.status);
+    var all=await r.json();
+    var now=new Date();
+    var gen=all.filter(function(i){return(i.channelType||i.channel)==='general'});
+    var cur=gen.find(function(i){return new Date(i.startTime)<=now&&new Date(i.endTime)>now});
+    var todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    var forecast=gen.filter(function(i){return new Date(i.startTime)>=todayStart});
+
+    var reserve=liveData?liveData.reserve:null;
+    var soc=liveData?liveData.soc:null;
+    if(cur)setPrice(cur.perKwh,cur.descriptor||'',reserve,soc);
+    buildForecast(forecast);
+    buildIntervals(all);
+    setLive(liveData?'live':'amber');
+  }catch(e){
+    setLive('off');
+    $('price-desc').textContent='price unavailable';
+  }
+
+  // Overnight stale-data notice (cache >10 min means monitor is sleeping)
+  var nightNote=$('night-note');
+  if(liveData&&liveData.cacheAgeSec!=null){
+    nightNote.classList.toggle('hidden',liveData.cacheAgeSec<=600);
+  }else{
+    nightNote.classList.add('hidden');
+  }
+
+  // Live battery data
+  if(liveData){
+    setSoc(liveData.soc);
+    setFlow('f-solar',liveData.solarKw);
+    setFlow('f-grid',liveData.gridKw,'d-grid','import','export');
+    setFlow('f-home',liveData.homeKw);
+    setFlow('f-batt',liveData.battKw,'d-batt','charging','discharging');
+  }else{
+    setSoc(null);
+    setFlow('f-solar',null);setFlow('f-grid',null,'d-grid');
+    setFlow('f-home',null);setFlow('f-batt',null,'d-batt');
+  }
+
+  // Plan windows: use live plan if provided, else illustrative
+  var windows;
+  if(liveData&&liveData.windows&&liveData.windows.length){
+    windows=liveData.windows;
+    $('plan-note').textContent='today';
+  }else{
+    windows=[
+      {name:'Midday top-up',s:'10:00',e:'11:30',p:14.2},
+      {name:'Evening charge',s:'21:00',e:'22:30',p:18.6},
+      {name:'Overnight',s:'01:00',e:'03:00',p:11.4}
+    ];
+    $('plan-note').textContent='illustrative';
+  }
+  buildTimeline(windows);
+
+  var n=new Date();
+  $('updated').textContent='Updated '+fmt(n);
+  setTimeout(function(){$('refresh-btn').classList.remove('spinning')},600);
+}
+
+function showToast(msg){
+  var t=$('toast');
+  t.textContent=msg;t.className='toast show';
+  clearTimeout(window._toastT);
+  window._toastT=setTimeout(function(){t.className='toast'},2600);
+}
+
+function cmd(text){
+  if(window.parent&&window.parent!==window&&typeof window.sendPrompt==='function'){window.sendPrompt(text);return;}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text)
+      .then(function(){showToast('Prompt copied — paste in Claude');})
+      .catch(function(){showToast('Could not copy to clipboard');});
+  }else{
+    showToast('Open Claude and paste this command');
+    console.log('PROMPT:',text);
+  }
+}
+
+// init
+if(!endpoint)$('endpoint-input').value='';
+else $('endpoint-input').value=endpoint;
+refresh(false);
+setInterval(function(){refresh(false)},120000);
+</script>
+</body>
+</html>

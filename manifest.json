@@ -1,0 +1,13 @@
+{
+  "name": "Powerwall Dashboard",
+  "short_name": "Powerwall",
+  "description": "Live Powerwall SoC, Amber electricity prices, and charge plan",
+  "start_url": "/powerwall-dashboard/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f0f12",
+  "theme_color": "#0f0f12",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
