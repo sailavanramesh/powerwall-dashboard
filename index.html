@@ -589,7 +589,7 @@ async function refresh(manual){
   if(liveData&&liveData.cacheAgeSec!=null){
     var age=liveData.cacheAgeSec;
     if(age===-1){
-      $('night-note-text').textContent='Powerwall monitor not running — run logPowerwall() once in Apps Script to start it.';
+      $('night-note-text').textContent='Data paused overnight — Powerwall monitoring resumes at sunrise.';
       nightNote.classList.remove('hidden');
     }else if(age>600){
       $('night-note-text').textContent='Data paused overnight — Powerwall monitoring resumes at sunrise.';
