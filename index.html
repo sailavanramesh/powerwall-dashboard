@@ -295,6 +295,11 @@ body{padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 24px)
     <div class="tl" id="tl"><div class="tl-peak" id="tl-peak"></div><div class="tl-now" id="tl-now"></div></div>
     <div class="tl-axis"><span>12a</span><span>6a</span><span>12p</span><span>6p</span><span>12a</span></div>
     <div class="wins" id="wins"></div>
+    <div id="win-tip" style="display:none;background:var(--surface-3);border:1px solid var(--line-2);border-radius:10px;padding:8px 12px;margin-top:8px;font-size:12px;font-weight:600;align-items:center;justify-content:space-between;gap:8px">
+      <span id="win-tip-name" style="color:var(--txt)"></span>
+      <span id="win-tip-time" style="color:var(--txt-2)"></span>
+      <span id="win-tip-price" style="color:var(--teal)"></span>
+    </div>
   </div>
 
   <!-- Controls -->
@@ -502,11 +507,15 @@ function buildTimeline(windows){
     var isPast=em<nm&&sm>60,isAct=sm<=nm&&em>nm;
     var cls=isPast?'done':isAct?'active':'future';
     var bar=document.createElement('div');bar.className='tl-win '+cls;
-    bar.style.left=l+'%';bar.style.width=Math.max(parseFloat(wd),1.5)+'%';tl.appendChild(bar);
+    bar.style.left=l+'%';bar.style.width=Math.max(parseFloat(wd),1.5)+'%';
+    bar.style.cursor='pointer';
+    bar.onclick=(function(ww){return function(){onWinTap(ww.name,ww.s,ww.e,ww.p);};})(w);
+    tl.appendChild(bar);
     var dot=isPast?'var(--surface-3)':isAct?'var(--teal)':'var(--amber)';
     var bcls=isPast?'b-done':isAct?'b-active':'b-up';
     var btxt=isPast?'Done':isAct?'Active':'Upcoming';
-    html+='<div class="win"><div class="win-dot" style="background:'+dot+'"></div><div class="win-info"><div class="win-name">'+w.name+'</div><div class="win-meta">'+w.s+'–'+w.e+' · avg '+w.p.toFixed(1)+' c/kWh</div></div><div class="win-badge '+bcls+'">'+btxt+'</div></div>';
+    var pcol=isAct?'var(--teal)':isPast?'var(--txt-3)':'var(--amber)';
+    html+='<div class="win" style="cursor:pointer" onclick="onWinTap(\''+w.name.replace(/'/g,"\\'")+"','"+w.s+"','"+w.e+"',"+w.p+')"><div class="win-dot" style="background:'+dot+'"></div><div class="win-info"><div class="win-name">'+w.name+'</div><div class="win-meta">'+w.s+'–'+w.e+' · avg '+w.p.toFixed(1)+' c/kWh</div></div><div class="win-badge '+bcls+'">'+btxt+'</div></div>';
   });
   $('wins').innerHTML=html;
 }
@@ -661,7 +670,8 @@ function execSheet(){
   closeSheet();
   if(endpoint&&a.gasKey){
     showToast('Sending…');
-    fetch(endpoint,{method:'POST',body:JSON.stringify({action:a.gasKey})})
+    var sep=endpoint.indexOf('?')>=0?'&':'?';
+    fetch(endpoint+sep+'action='+a.gasKey)
       .then(function(r){return r.json();})
       .then(function(d){showToast(d.ok?'✓ '+d.result:'Error: '+(d.error||'unknown'));})
       .catch(function(){showToast('Could not reach endpoint — check Settings');});
@@ -690,6 +700,18 @@ function onBarTap(time,price,cls){
   if(cls==='cheap'){label.textContent='Cheap';label.style.background='var(--teal-dim)';label.style.color='var(--teal)';}
   else if(cls==='mid'){label.textContent='Mid';label.style.background='var(--amber-dim)';label.style.color='var(--amber)';}
   else{label.textContent='Peak';label.style.background='var(--red-dim)';label.style.color='var(--red)';}
+  tip.style.display='flex';
+}
+
+/* ===== Charge plan window tap ===== */
+function onWinTap(name,s,e,p){
+  var tip=$('win-tip');
+  $('win-tip-name').textContent=name;
+  $('win-tip-time').textContent=s+'–'+e;
+  var pc=p.toFixed(1)+'c/kWh';
+  var priceEl=$('win-tip-price');
+  priceEl.textContent=pc;
+  priceEl.style.color=p<=15?'var(--teal)':p<=30?'var(--amber)':'var(--red)';
   tip.style.display='flex';
 }
 
