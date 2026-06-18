@@ -175,7 +175,7 @@ body{padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 24px)
 .sheet-handle{width:36px;height:4px;background:var(--line-2);border-radius:2px;margin:0 auto 20px}
 .sheet-label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--txt-3);margin-bottom:6px}
 .sheet-title{font-size:20px;font-weight:700;margin-bottom:8px}
-.sheet-desc{font-size:14px;color:var(--txt-2);line-height:1.5;margin-bottom:22px}
+.sheet-desc{font-size:14px;color:var(--txt-2);line-height:1.5;margin-bottom:22px;white-space:pre-wrap}
 .sheet-primary{width:100%;padding:15px;border-radius:var(--radius-sm);border:none;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px}
 .sheet-primary.go{background:var(--teal);color:#0a1a14}
 .sheet-primary.send{background:var(--surface-3);color:var(--txt);border:1px solid var(--line-2)}
@@ -342,7 +342,7 @@ body{padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 24px)
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
     Copy prompt for Claude
   </button>
-  <button class="sheet-cancel" onclick="closeSheet()">Cancel</button>
+  <button class="sheet-cancel" id="sheet-cancel" onclick="closeSheet()">Cancel</button>
 </div>
 <div id="toast" class="toast"></div>
 
@@ -645,11 +645,11 @@ function showToast(msg){
 /* ===== Action sheet ===== */
 var ACTIONS={
   replan:{title:'Replan now',desc:'Re-fetches the Amber price forecast and reschedules today\'s charge windows based on current prices.',prompt:'Run csReplanNow() to re-fetch the Amber forecast and reschedule today\'s charge windows, then show me the updated plan',gasKey:'replan'},
-  status:{title:'Status check',desc:'Shows the current Powerwall SoC, backup reserve %, and whether the battery is actively charging.',prompt:'Run csStatusCheck() and tell me the current Powerwall SoC, backup_reserve percentage, and whether charging is active'},
+  status:{title:'Status check',desc:'Shows the current Powerwall SoC, backup reserve %, and whether the battery is actively charging.',prompt:'Run csStatusCheck() and tell me the current Powerwall SoC, backup_reserve percentage, and whether charging is active',gasKey:'status'},
   force:{title:'Force charge',desc:'Starts grid charging immediately. Checks it\'s outside peak hours first to avoid high-rate charging.',prompt:'I want to start charging now. Confirm it is outside peak hours first, then run csForceChargeNow()',gasKey:'force'},
   stop:{title:'Stop charge',desc:'Stops charging immediately, restores backup reserve to 10%, and clears all charge triggers.',prompt:'Stop charging immediately. Run csForceStopCharge() to restore backup_reserve to 10% and clear all charge triggers',gasKey:'stop'},
-  triggers:{title:'List triggers',desc:'Lists every active Apps Script trigger — which functions are scheduled and when they next run.',prompt:'Run csListTriggers() and show me every current Apps Script trigger function with its schedule'},
-  savings:{title:'Savings report',desc:'Calculates today\'s energy savings versus buying at the peak rate and sends a summary.',prompt:'Run csSendDailySavingsSummary() and show me today\'s energy savings versus the peak rate'}
+  triggers:{title:'List triggers',desc:'Lists every active Apps Script trigger — which functions are scheduled and when they next run.',prompt:'Run csListTriggers() and show me every current Apps Script trigger function with its schedule',gasKey:'triggers'},
+  savings:{title:'Savings report',desc:'Calculates today\'s energy savings versus buying at the peak rate and sends a summary.',prompt:'Run csSendDailySavingsSummary() and show me today\'s energy savings versus the peak rate',gasKey:'savings'}
 };
 var _sheetKey=null;
 
@@ -660,6 +660,8 @@ function showAction(key){
   $('sheet-title').textContent=a.title;
   $('sheet-desc').textContent=a.desc;
   var btn=$('sheet-btn');
+  btn.disabled=false;
+  btn.onclick=execSheet;
   var hasGas=endpoint&&a.gasKey;
   if(hasGas){
     btn.className='sheet-primary go';
@@ -679,27 +681,66 @@ function closeSheet(){
 }
 
 function execSheet(){
-  var a=ACTIONS[_sheetKey]; if(!a)return;
-  closeSheet();
+  var a=ACTIONS[_sheetKey]; if(!a){closeSheet();return;}
   if(endpoint&&a.gasKey){
-    showToast('Sending…');
+    var btn=$('sheet-btn');
+    btn.disabled=true;
+    btn.innerHTML='Working…';
+    $('sheet-cancel').disabled=true;
     var sep=endpoint.indexOf('?')>=0?'&':'?';
     fetch(endpoint+sep+'action='+a.gasKey)
       .then(function(r){return r.json();})
       .then(function(d){
-        if(!d.ok){showToast('Error: '+(d.error||'unknown'));return;}
-        if(a.gasKey==='replan'&&d.windows&&d.windows.length){
-          buildTimeline(d.windows);
-          $('plan-note').textContent='just updated';
-          showToast('✓ Replanned — '+d.windows.length+' window'+(d.windows.length!==1?'s':'')+' scheduled');
+        $('sheet-cancel').disabled=false;
+        if(!d.ok){_showSheetResult('Something went wrong','⚠️ '+(d.error||'Unknown error'));return;}
+        var detail='';
+        if(a.gasKey==='replan'){
+          if(d.windows&&d.windows.length){
+            buildTimeline(d.windows);
+            $('plan-note').textContent='just updated';
+            detail=d.windows.length+' window'+(d.windows.length!==1?'s':'')+' scheduled:';
+            d.windows.forEach(function(w){detail+='\n• '+w.name+': '+w.s+'–'+w.e+' @ '+w.p.toFixed(1)+'c';});
+          }else{
+            detail='No charging windows needed today.';
+          }
+        }else if(a.gasKey==='status'){
+          var chg=d.charging?'🔌 Charging (forced)':'⚡ Self-consuming';
+          detail='SoC: '+(d.soc!=null?Math.round(d.soc)+'%':'--')
+               +'\nMode: '+chg
+               +'\nReserve: '+(d.reserve!=null?d.reserve+'%':'--');
+          if(d.solarKw!=null)detail+='\nSolar: '+d.solarKw.toFixed(2)+' kW';
+          if(d.homeKw!=null) detail+='\nHome: '+d.homeKw.toFixed(2)+' kW';
+          detail+='\n\nFull status sent to Telegram.';
+        }else if(a.gasKey==='triggers'){
+          if(d.triggers&&d.triggers.length){
+            detail=d.result+':\n\n'+d.triggers.map(function(t){return '• '+t;}).join('\n');
+          }else{
+            detail='No active triggers found.';
+          }
         }else{
-          showToast('✓ '+d.result);
+          detail=d.result||'Done.';
         }
+        _showSheetResult('✓ '+a.title,detail);
       })
-      .catch(function(){showToast('Could not reach endpoint — check Settings');});
+      .catch(function(){
+        $('sheet-cancel').disabled=false;
+        _showSheetResult('Connection error','Could not reach endpoint — check Settings');
+      });
   }else{
+    closeSheet();
     copyPrompt(a.prompt);
   }
+}
+
+function _showSheetResult(title,detail){
+  $('sheet-label').textContent='Result';
+  $('sheet-title').textContent=title;
+  $('sheet-desc').textContent=detail;
+  var btn=$('sheet-btn');
+  btn.disabled=false;
+  btn.className='sheet-primary send';
+  btn.innerHTML='Done';
+  btn.onclick=closeSheet;
 }
 
 function copyPrompt(text){
