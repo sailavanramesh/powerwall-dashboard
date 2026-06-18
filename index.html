@@ -713,9 +713,11 @@ function execSheet(){
           if(d.cacheAgeSec!=null)detail+='\nData age: '+Math.round(d.cacheAgeSec/60)+' min';
         }else if(a.gasKey==='triggers'){
           if(d.triggers&&d.triggers.length){
-            detail=d.result+':\n\n'+d.triggers.map(function(t){return '• '+t;}).join('\n');
+            var installedStr='';
+            if(d.installedAt){installedStr='\n\nInstalled: '+new Date(d.installedAt).toLocaleString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});}
+            detail=d.triggers.map(function(t){return '• '+t;}).join('\n')+installedStr;
           }else{
-            detail='No active triggers found.\n\nRun csSetupTriggers() from the Apps Script editor to schedule daily replan, mid-day recheck and savings summary.';
+            detail='No triggers installed yet.\n\nOpen the Apps Script editor and run csInstallDailyTrigger() to schedule the daily replan, mid-day recheck, evening replan, and savings summary.';
           }
         }else if(a.gasKey==='savings'){
           var t=d.today||{kwh:0,cost:0,saving:0};
