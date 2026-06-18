@@ -575,7 +575,7 @@ function buildExportAnalysis(all,liveData){
   card.classList.remove('hidden');
 
   var curFeedIn=feedInSlots.find(function(s){return new Date(s.startTime)<=now&&new Date(s.endTime)>now;});
-  var exportRate=curFeedIn?curFeedIn.perKwh:null;
+  var exportRate=curFeedIn?-curFeedIn.perKwh:null;
 
   var horizon=new Date(now.getTime()+12*3600000);
   var upcomingGen=genSlots.filter(function(s){var t=new Date(s.startTime);return t>now&&t<=horizon;});
@@ -651,12 +651,12 @@ function buildExportAnalysis(all,liveData){
   }
 
   var exportThreshold=Math.max(cheapRechargeRate+3,5);
-  var goodSlots=feedInSlots.filter(function(s){var t=new Date(s.startTime);return t>=now&&t<todayEnd&&s.perKwh>=exportThreshold;}).sort(function(a,b){return new Date(a.startTime)-new Date(b.startTime);});
+  var goodSlots=feedInSlots.filter(function(s){var t=new Date(s.startTime);return t>=now&&t<todayEnd&&(-s.perKwh)>=exportThreshold;}).sort(function(a,b){return new Date(a.startTime)-new Date(b.startTime);});
   var mergedWins=[];
   goodSlots.forEach(function(s){
     var last=mergedWins[mergedWins.length-1];
-    if(last&&Math.abs(new Date(s.startTime)-new Date(last.endTime))<120000){last.endTime=s.endTime;last.maxP=Math.max(last.maxP,s.perKwh);}
-    else{mergedWins.push({startTime:s.startTime,endTime:s.endTime,maxP:s.perKwh});}
+    if(last&&Math.abs(new Date(s.startTime)-new Date(last.endTime))<120000){last.endTime=s.endTime;last.maxP=Math.max(last.maxP,-s.perKwh);}
+    else{mergedWins.push({startTime:s.startTime,endTime:s.endTime,maxP:-s.perKwh});}
   });
 
   var metaHtml='<div class="exp-meta"><span>Peak draw: <strong style="color:var(--red)">'+maxRateBeforeCharge.toFixed(1)+'c</strong> '+peakTimeStr+'</span><span>Recharge: <strong style="color:var(--teal)">'+cheapRechargeRate.toFixed(1)+'c</strong>'+(nextCharge?' · '+fmt(nextCharge.time):'')+' ('+(nextCharge?nextCharge.name:'est.')+')'+' </span></div>';
