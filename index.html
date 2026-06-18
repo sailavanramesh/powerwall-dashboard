@@ -537,7 +537,8 @@ function buildTimeline(windows,isLive){
     var sm=+sp[0]*60+(+sp[1]),em=+ep[0]*60+(+ep[1]);
     if(em<sm)em+=total;
     var l=(sm/total*100).toFixed(1),wd=((em-sm)/total*100).toFixed(1);
-    var isPast=isLive&&(em<nm&&sm>60),isAct=isLive&&(sm<=nm&&em>nm);
+    var isNextDayWindow=sm<360&&nm>720;
+    var isPast=isLive&&!isNextDayWindow&&(em<nm&&sm>60),isAct=isLive&&(sm<=nm&&em>nm);
     var cls=isPast?'done':isAct?'active':'future';
     var bar=document.createElement('div');bar.className='tl-win '+cls;
     bar.style.left=l+'%';bar.style.width=Math.max(parseFloat(wd),1.5)+'%';
