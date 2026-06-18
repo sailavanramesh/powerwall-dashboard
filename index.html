@@ -571,7 +571,7 @@ function buildExportAnalysis(all,liveData){
 
   var feedInSlots=all.filter(function(s){return(s.channelType||s.channel)==='feedIn';});
   var genSlots=all.filter(function(s){return(s.channelType||s.channel)==='general';});
-  if(!feedInSlots.length){card.classList.add('hidden');return;}
+  console.log('[export] channels in API response:',Array.from(new Set(all.map(function(s){return s.channelType||s.channel;}))));
   card.classList.remove('hidden');
 
   var curFeedIn=feedInSlots.find(function(s){return new Date(s.startTime)<=now&&new Date(s.endTime)>now;});
