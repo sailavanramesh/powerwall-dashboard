@@ -167,6 +167,26 @@ body{padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 24px)
 .banner input{width:100%;margin-top:10px;background:var(--bg);border:1px solid var(--line-2);color:var(--txt);font-size:12px;padding:10px 12px;border-radius:9px;font-family:inherit}
 .hidden{display:none!important}
 .skel{color:var(--txt-3)}
+/* ===== Export Analysis ===== */
+.exp-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.exp-badge{font-size:11px;font-weight:700;padding:5px 12px;border-radius:10px;letter-spacing:.01em;flex-shrink:0}
+.exp-go{background:rgba(45,212,164,.22);color:var(--teal)}
+.exp-good{background:rgba(45,212,164,.14);color:var(--teal)}
+.exp-hold{background:var(--red-dim);color:var(--red)}
+.exp-neutral{background:var(--amber-dim);color:var(--amber)}
+.exp-rate{font-size:12px;color:var(--txt-2);font-weight:500}
+.exp-rate strong{color:var(--txt);font-weight:700}
+.exp-meta{display:flex;gap:14px;margin-bottom:8px;font-size:11px;color:var(--txt-3);font-weight:500;flex-wrap:wrap}
+.exp-meta strong{font-weight:600}
+.exp-logic{background:var(--surface-2);border-radius:10px;padding:10px 12px;margin-top:10px}
+.exp-line{font-size:12px;color:var(--txt-2);line-height:1.55;margin-bottom:4px}
+.exp-line:last-child{margin-bottom:0}
+.exp-wins-label{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--txt-3);margin-top:12px;margin-bottom:6px}
+.exp-wins{display:flex;flex-wrap:wrap;gap:6px}
+.exp-win{display:flex;align-items:center;gap:5px;background:var(--teal-dim);border-radius:8px;padding:4px 9px;font-size:11px;font-weight:600;color:var(--teal)}
+.exp-win-now{background:rgba(45,212,164,.28);border:1px solid rgba(45,212,164,.4)}
+.exp-win-rate{font-weight:700}
+.exp-win-badge{font-size:9px;padding:1px 5px;border-radius:5px;background:var(--teal);color:#0a1a14;font-weight:700;margin-left:2px}
 /* ===== Action sheet ===== */
 .sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;opacity:0;pointer-events:none;transition:opacity .25s}
 .sheet-overlay.open{opacity:1;pointer-events:all}
@@ -284,6 +304,15 @@ body{padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 24px)
       <span><i style="background:var(--red)"></i>Peak</span>
       <span style="margin-left:auto"><i style="width:1.5px;height:11px;background:var(--txt)"></i>Now</span>
     </div>
+  </div>
+
+  <!-- Export Analysis -->
+  <div class="card hidden" id="export-card">
+    <div class="card-head">
+      <span class="card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Solar export</span>
+      <span class="card-note" id="export-note">analysis</span>
+    </div>
+    <div id="export-card-inner"><div class="skel" style="font-size:12px">Calculating…</div></div>
   </div>
 
   <!-- Charge plan -->
@@ -524,6 +553,132 @@ function buildTimeline(windows){
   $('wins').innerHTML=html;
 }
 
+/* ===== Export analysis helpers ===== */
+function formatHoursUntil(t){
+  var diff=(t-new Date())/3600000;
+  if(diff<=0)return'now';
+  if(diff<1)return Math.round(diff*60)+'m';
+  var h=Math.floor(diff),m=Math.round((diff-h)*60);
+  return h+'h'+(m>0?' '+m+'m':'');
+}
+
+function buildExportAnalysis(all,liveData){
+  var card=$('export-card');
+  if(!card)return;
+  var now=new Date();
+  var todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  var todayEnd=new Date(todayStart.getTime()+86400000);
+
+  var feedInSlots=all.filter(function(s){return(s.channelType||s.channel)==='feedIn';});
+  var genSlots=all.filter(function(s){return(s.channelType||s.channel)==='general';});
+  if(!feedInSlots.length){card.classList.add('hidden');return;}
+  card.classList.remove('hidden');
+
+  var curFeedIn=feedInSlots.find(function(s){return new Date(s.startTime)<=now&&new Date(s.endTime)>now;});
+  var exportRate=curFeedIn?curFeedIn.perKwh:null;
+
+  var horizon=new Date(now.getTime()+12*3600000);
+  var upcomingGen=genSlots.filter(function(s){var t=new Date(s.startTime);return t>now&&t<=horizon;});
+
+  var soc=liveData?liveData.soc:null;
+  var reserve=liveData?(liveData.reserve||10):10;
+  var homeKw=liveData?liveData.homeKw:null;
+  var solarKw=liveData?liveData.solarKw:null;
+  var battKwh=parseFloat(localStorage.getItem('batt_kwh')||'13.5');
+  var consumKw=(homeKw&&homeKw>0.05)?homeKw:0.35;
+
+  var planWindows=liveData&&liveData.windows?liveData.windows:[];
+  var nextCharge=null;
+  planWindows.forEach(function(w){
+    var parts=w.s.split(':');
+    var wt=new Date(todayStart);
+    wt.setHours(+parts[0],+parts[1],0,0);
+    if(wt<now)wt.setDate(wt.getDate()+1);
+    if(!nextCharge||wt<nextCharge.time)nextCharge={time:wt,rate:w.p,name:w.name};
+  });
+
+  if(!nextCharge){
+    var overnightSlots=genSlots.filter(function(s){var d=new Date(s.startTime),h=d.getHours();return d>now&&(h>=22||h<6);});
+    if(overnightSlots.length){
+      var minRate=Math.min.apply(null,overnightSlots.map(function(s){return s.perKwh;}));
+      var cheapSlot=overnightSlots.find(function(s){return s.perKwh<=minRate+0.01;});
+      nextCharge={time:new Date(cheapSlot.startTime),rate:minRate,name:'cheapest overnight'};
+    }
+  }
+
+  var cheapRechargeRate=nextCharge?nextCharge.rate:12;
+  var hoursUntilCharge=nextCharge?Math.max(0,(nextCharge.time-now)/3600000):8;
+
+  var hoursToScan=Math.min(hoursUntilCharge,12);
+  var scanCutoff=new Date(now.getTime()+hoursToScan*3600000);
+  var slotsBeforeCharge=upcomingGen.filter(function(s){return new Date(s.startTime)<scanCutoff;});
+  var maxRateBeforeCharge=slotsBeforeCharge.length?Math.max.apply(null,slotsBeforeCharge.map(function(s){return s.perKwh;})):0;
+
+  var inPeakNow=now.getHours()>=PEAK_S&&now.getHours()<PEAK_E;
+  var peakSlots=slotsBeforeCharge.filter(function(s){var h=new Date(s.startTime).getHours();return h>=PEAK_S&&h<PEAK_E;});
+  var peakTimeStr=inPeakNow?'now':(peakSlots.length?'in '+formatHoursUntil(new Date(peakSlots[0].startTime)):'n/a');
+
+  var availableKwh=soc!=null?Math.max(0,(soc-reserve)/100*battKwh):null;
+  var neededKwh=consumKw*Math.min(hoursUntilCharge,10);
+  var surplusKwh=availableKwh!=null?availableKwh-neededKwh:null;
+  var netProfit=exportRate!=null?exportRate-cheapRechargeRate:null;
+
+  var rec,recCls,lines;
+  if(exportRate==null){
+    rec='No export data';recCls='exp-neutral';
+    lines=['Current export price not available for this interval.'];
+  }else if(exportRate<=0){
+    rec='Do not export';recCls='exp-hold';
+    lines=['Export rate is '+exportRate.toFixed(1)+'c — grid is oversupplied, exporting would cost you money.','Use solar for self-consumption or battery charging instead.'];
+  }else if(exportRate>=maxRateBeforeCharge&&maxRateBeforeCharge>5){
+    rec='Export beats storage';recCls='exp-go';
+    lines=['Export earns '+exportRate.toFixed(1)+'c/kWh ≥ highest upcoming import rate ('+maxRateBeforeCharge.toFixed(1)+'c) — selling now is worth more than storing.',
+      availableKwh!=null?'Battery: '+availableKwh.toFixed(1)+'kWh usable, ~'+neededKwh.toFixed(1)+'kWh est. needed → '+(surplusKwh!=null&&surplusKwh>0?surplusKwh.toFixed(1)+'kWh exportable surplus.':'battery is fully needed — export only fresh solar, not stored energy.'):'Rate favours exporting over battery storage right now.'];
+  }else if(surplusKwh!=null&&surplusKwh>0.5&&netProfit!=null&&netProfit>3){
+    rec='Surplus worth exporting';recCls='exp-good';
+    lines=['Export at '+exportRate.toFixed(1)+'c now, recharge at '+cheapRechargeRate.toFixed(1)+'c ('+(nextCharge?nextCharge.name:'overnight')+') = +'+netProfit.toFixed(1)+'c/kWh net arbitrage.','Est. peak demand ~'+neededKwh.toFixed(1)+'kWh is covered; battery has '+surplusKwh.toFixed(1)+'kWh spare above that — safe to export the difference.'];
+  }else if(maxRateBeforeCharge>exportRate+5){
+    rec='Hold — peak protection wins';recCls='exp-hold';
+    lines=['Export earns '+exportRate.toFixed(1)+'c vs peak draw at '+maxRateBeforeCharge.toFixed(1)+'c ('+peakTimeStr+') — holding saves '+(maxRateBeforeCharge-exportRate).toFixed(1)+'c/kWh more than exporting now.',
+      availableKwh!=null?(surplusKwh!=null&&surplusKwh<=0.3?'Battery ('+availableKwh.toFixed(1)+'kWh) barely covers estimated demand — do not export any stored energy.':'The '+((maxRateBeforeCharge-exportRate).toFixed(1))+'c/kWh peak rate gap makes battery storage the better call.'):'Battery state unknown — keep stored energy for peak protection.'];
+  }else if(netProfit!=null&&netProfit<-2){
+    rec='Not worth exporting';recCls='exp-hold';
+    lines=['Export at '+exportRate.toFixed(1)+'c, but recharging would cost '+cheapRechargeRate.toFixed(1)+'c — net loss of '+Math.abs(netProfit).toFixed(1)+'c/kWh vs later recharge.','Better to self-consume solar or keep battery full for '+maxRateBeforeCharge.toFixed(1)+'c peak protection.'];
+  }else{
+    rec='Roughly equal value';recCls='exp-neutral';
+    lines=['Export: '+(exportRate!=null?exportRate.toFixed(1):'--')+'c | Peak protection: '+maxRateBeforeCharge.toFixed(1)+'c | Net export profit vs recharge: '+(netProfit!=null?(netProfit>0?'+':'')+netProfit.toFixed(1):'--')+'c — no clear winner.',
+      surplusKwh!=null&&surplusKwh>0.5?'Battery has '+surplusKwh.toFixed(1)+'kWh surplus — exporting that amount is low-risk either way.':'Watch for a better price spread before committing to export.'];
+  }
+
+  var exportThreshold=Math.max(cheapRechargeRate+3,5);
+  var goodSlots=feedInSlots.filter(function(s){var t=new Date(s.startTime);return t>=now&&t<todayEnd&&s.perKwh>=exportThreshold;}).sort(function(a,b){return new Date(a.startTime)-new Date(b.startTime);});
+  var mergedWins=[];
+  goodSlots.forEach(function(s){
+    var last=mergedWins[mergedWins.length-1];
+    if(last&&Math.abs(new Date(s.startTime)-new Date(last.endTime))<120000){last.endTime=s.endTime;last.maxP=Math.max(last.maxP,s.perKwh);}
+    else{mergedWins.push({startTime:s.startTime,endTime:s.endTime,maxP:s.perKwh});}
+  });
+
+  var metaHtml='<div class="exp-meta"><span>Peak draw: <strong style="color:var(--red)">'+maxRateBeforeCharge.toFixed(1)+'c</strong> '+peakTimeStr+'</span><span>Recharge: <strong style="color:var(--teal)">'+cheapRechargeRate.toFixed(1)+'c</strong>'+(nextCharge?' · '+fmt(nextCharge.time):'')+' ('+(nextCharge?nextCharge.name:'est.')+')'+' </span></div>';
+  var battHtml='';
+  if(soc!=null&&availableKwh!=null){
+    battHtml='<div class="exp-meta"><span>Battery: <strong>'+soc.toFixed(0)+'% · '+availableKwh.toFixed(1)+'kWh usable</strong></span>'+(surplusKwh!=null?'<span>Surplus above peak need: <strong style="color:'+(surplusKwh>0.5?'var(--teal)':surplusKwh>0?'var(--amber)':'var(--red)')+'">'+Math.max(0,surplusKwh).toFixed(1)+'kWh</strong></span>':'')+' </div>';
+  }
+  var logicHtml='<div class="exp-logic">'+lines.filter(function(l){return l;}).map(function(l){return'<div class="exp-line">'+l+'</div>';}).join('')+'</div>';
+  var winsHtml='';
+  if(mergedWins.length){
+    winsHtml='<div class="exp-wins-label">Good export windows today</div><div class="exp-wins">'+mergedWins.slice(0,5).map(function(w){var isCur=new Date(w.startTime)<=now&&new Date(w.endTime)>now;return'<div class="exp-win'+(isCur?' exp-win-now':'')+'"><span>'+fmt(new Date(w.startTime))+'–'+fmt(new Date(w.endTime))+'</span><span class="exp-win-rate">'+w.maxP.toFixed(1)+'c</span>'+(isCur?'<span class="exp-win-badge">now</span>':'')+'</div>';}).join('')+'</div>';
+  }else{
+    winsHtml='<div class="exp-wins-label" style="color:var(--txt-3)">No standout export windows found for today</div>';
+  }
+
+  var solarActive=solarKw!=null&&solarKw>0.1;
+  $('export-card-inner').innerHTML=
+    '<div class="exp-top"><div class="exp-badge '+recCls+'">'+rec+'</div>'+'<div class="exp-rate">Export now: <strong>'+(exportRate!=null?exportRate.toFixed(1)+'c/kWh':'--')+'</strong>'+(solarActive?' · '+solarKw.toFixed(2)+'kW solar':'')+' </div></div>'+
+    metaHtml+battHtml+logicHtml+winsHtml;
+  $('export-note').textContent=exportRate!=null?exportRate.toFixed(1)+'c/kWh':'analysis';
+}
+
 /* ===== Live data via Apps Script ===== */
 async function fetchLive(){
   if(!endpoint)return null;
@@ -578,6 +733,7 @@ async function refresh(manual){
     if(cur)setPrice(cur.perKwh,cur.descriptor||'',reserve,soc);
     buildForecast(forecast);
     buildIntervals(all);
+    buildExportAnalysis(all,liveData);
     setLive(liveData?'live':'amber');
   }catch(e){
     setLive('off');
