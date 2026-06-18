@@ -523,7 +523,7 @@ function buildIntervals(all){
 }
 
 /* ===== Timeline + plan ===== */
-function buildTimeline(windows){
+function buildTimeline(windows,isLive){
   var total=1440,now=new Date(),nm=now.getHours()*60+now.getMinutes();
   $('tl-now').style.left=(nm/total*100).toFixed(1)+'%';
   $('tl-peak').style.left=(PEAK_S*60/total*100).toFixed(1)+'%';
@@ -537,7 +537,7 @@ function buildTimeline(windows){
     var sm=+sp[0]*60+(+sp[1]),em=+ep[0]*60+(+ep[1]);
     if(em<sm)em+=total;
     var l=(sm/total*100).toFixed(1),wd=((em-sm)/total*100).toFixed(1);
-    var isPast=em<nm&&sm>60,isAct=sm<=nm&&em>nm;
+    var isPast=isLive&&(em<nm&&sm>60),isAct=isLive&&(sm<=nm&&em>nm);
     var cls=isPast?'done':isAct?'active':'future';
     var bar=document.createElement('div');bar.className='tl-win '+cls;
     bar.style.left=l+'%';bar.style.width=Math.max(parseFloat(wd),1.5)+'%';
@@ -771,9 +771,10 @@ async function refresh(manual){
   }
 
   // Plan windows: use live plan if provided, else illustrative
-  var windows;
+  var windows,isLive=false;
   if(liveData&&liveData.windows&&liveData.windows.length){
     windows=liveData.windows;
+    isLive=true;
     $('plan-note').textContent='today';
   }else{
     windows=[
@@ -783,7 +784,7 @@ async function refresh(manual){
     ];
     $('plan-note').textContent='illustrative';
   }
-  buildTimeline(windows);
+  buildTimeline(windows,isLive);
 
   var n=new Date();
   $('updated').textContent='Updated '+fmt(n);
@@ -852,7 +853,7 @@ function execSheet(){
         var detail='';
         if(a.gasKey==='replan'){
           if(d.windows&&d.windows.length){
-            buildTimeline(d.windows);
+            buildTimeline(d.windows,true);
             $('plan-note').textContent='just updated';
             detail=d.windows.length+' window'+(d.windows.length!==1?'s':'')+' scheduled:';
             d.windows.forEach(function(w){detail+='\n• '+w.name+': '+w.s+'–'+w.e+' @ '+w.p.toFixed(1)+'c';});
