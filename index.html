@@ -710,13 +710,23 @@ function execSheet(){
                +'\nReserve: '+(d.reserve!=null?d.reserve+'%':'--');
           if(d.solarKw!=null)detail+='\nSolar: '+d.solarKw.toFixed(2)+' kW';
           if(d.homeKw!=null) detail+='\nHome: '+d.homeKw.toFixed(2)+' kW';
-          detail+='\n\nFull status sent to Telegram.';
+          if(d.cacheAgeSec!=null)detail+='\nData age: '+Math.round(d.cacheAgeSec/60)+' min';
         }else if(a.gasKey==='triggers'){
           if(d.triggers&&d.triggers.length){
             detail=d.result+':\n\n'+d.triggers.map(function(t){return '• '+t;}).join('\n');
           }else{
-            detail='No active triggers found.';
+            detail='No active triggers found.\n\nRun csSetupTriggers() from the Apps Script editor to schedule daily replan, mid-day recheck and savings summary.';
           }
+        }else if(a.gasKey==='savings'){
+          var t=d.today||{kwh:0,cost:0,saving:0};
+          var tot=d.totals||{saving:0};
+          var days=d.days||1;
+          detail='Today:\n'
+                +'• Charged cheaply: '+(t.kwh||0).toFixed(1)+' kWh\n'
+                +'• Cost paid: $'+(t.cost||0).toFixed(2)+'\n'
+                +'• Saving today: $'+(t.saving||0).toFixed(2)+'\n\n'
+                +days+'-day total saving: $'+(tot.saving||0).toFixed(2)+'\n'
+                +'Projected annual: $'+Math.round(((tot.saving||0)/days)*365);
         }else{
           detail=d.result||'Done.';
         }
