@@ -341,6 +341,7 @@ body{padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 24px)
       <button class="ctrl stop" onclick="showAction('stop')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>Stop charge</button>
       <button class="ctrl" onclick="showAction('triggers')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>List triggers</button>
       <button class="ctrl" onclick="showAction('savings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Savings</button>
+      <button class="ctrl" onclick="showAction('log')" style="grid-column:1/-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>Action log</button>
     </div>
   </div>
 
@@ -807,7 +808,8 @@ var ACTIONS={
   force:{title:'Force charge',desc:'Starts grid charging immediately. Checks it\'s outside peak hours first to avoid high-rate charging.',prompt:'I want to start charging now. Confirm it is outside peak hours first, then run csForceChargeNow()',gasKey:'force'},
   stop:{title:'Stop charge',desc:'Stops charging immediately, restores backup reserve to 10%, and clears all charge triggers.',prompt:'Stop charging immediately. Run csForceStopCharge() to restore backup_reserve to 10% and clear all charge triggers',gasKey:'stop'},
   triggers:{title:'List triggers',desc:'Lists every active Apps Script trigger — which functions are scheduled and when they next run.',prompt:'Run csListTriggers() and show me every current Apps Script trigger function with its schedule',gasKey:'triggers'},
-  savings:{title:'Savings report',desc:'Calculates today\'s energy savings versus buying at the peak rate and sends a summary.',prompt:'Run csSendDailySavingsSummary() and show me today\'s energy savings versus the peak rate',gasKey:'savings'}
+  savings:{title:'Savings report',desc:'Calculates today\'s energy savings versus buying at the peak rate and sends a summary.',prompt:'Run csSendDailySavingsSummary() and show me today\'s energy savings versus the peak rate',gasKey:'savings'},
+  log:{title:'Action log',desc:'Shows the last 20 commands sent from this app — what ran, when, and whether it succeeded.',gasKey:'log'}
 };
 var _sheetKey=null;
 
@@ -887,6 +889,18 @@ function execSheet(){
                 +'• Saving today: $'+(t.saving||0).toFixed(2)+'\n\n'
                 +days+'-day total saving: $'+(tot.saving||0).toFixed(2)+'\n'
                 +'Projected annual: $'+Math.round(((tot.saving||0)/days)*365);
+        }else if(a.gasKey==='log'){
+          if(d.log&&d.log.length){
+            detail=d.log.slice().reverse().map(function(e){
+              var t=new Date(e.ts).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+              var line=t+' '+e.action+(e.ok===false?' ❌':' ✓');
+              if(e.detail)line+='\n  '+e.detail;
+              if(e.error)line+='\n  Error: '+e.error;
+              return line;
+            }).join('\n\n');
+          }else{
+            detail='No actions logged yet.';
+          }
         }else{
           detail=d.result||'Done.';
         }
